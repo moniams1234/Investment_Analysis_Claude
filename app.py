@@ -48,6 +48,12 @@ st.set_page_config(
 inject_css()
 
 
+# Helper: every Plotly chart must have a unique key in Streamlit Cloud
+def plotly(fig, key: str, width: str = "stretch") -> None:
+    st.plotly_chart(fig, width=width, key=key)
+
+
+
 # ─────────────────────────────────────────────────────────
 # Session state — STRICTLY EMPTY DEFAULTS
 # ─────────────────────────────────────────────────────────
@@ -136,13 +142,13 @@ with st.sidebar:
 
     st.divider()
     st.markdown("##### Workspace")
-    if st.button("🆕 Reset to empty project", use_container_width=True):
+    if st.button("🆕 Reset to empty project", width='stretch'):
         for k in list(st.session_state.keys()):
             del st.session_state[k]
         _init_state()
         st.rerun()
 
-    if st.button("📂 Load example/demo project", use_container_width=True):
+    if st.button("📂 Load example/demo project", width='stretch'):
         if SAMPLE_PATH.exists():
             data = load_project_json(SAMPLE_PATH)
             for k, v in data.items():
@@ -162,13 +168,13 @@ with st.sidebar:
         except Exception as e:
             st.error(f"Could not load project: {e}")
 
-    if st.button("💾 Download project (.json)", use_container_width=True):
+    if st.button("💾 Download project (.json)", width='stretch'):
         out = ROOT / "exports" / "project.json"
         out.parent.mkdir(exist_ok=True)
         save_project_json(_setup_dict() | {"forecast_df": st.session_state.forecast_df}, out)
         st.download_button("Download JSON", out.read_bytes(),
                            file_name=f"{st.session_state.project_name or 'project'}.json",
-                           mime="application/json", use_container_width=True)
+                           mime="application/json", width='stretch')
 
 
 # ─────────────────────────────────────────────────────────
@@ -223,11 +229,11 @@ with tabs[0]:
     st.write("")
     c1, c2 = st.columns([2, 1])
     with c1:
-        st.plotly_chart(dashboard_overview(pnl), use_container_width=True, key="exec_dashboard_overview")
+        st.plotly_chart(dashboard_overview(pnl), width='stretch', key="exec_dashboard_overview")
     with c2:
         st.plotly_chart(irr_gauge(summary.get("irr"), summary.get("hurdle", 0))
                         if summary else irr_gauge(None, 0),
-                        use_container_width=True, key="exec_irr_gauge")
+                        width='stretch', key="exec_irr_gauge")
     render_recommendation(summary)
 
 # ── Project Setup ──
@@ -302,7 +308,7 @@ with tabs[2]:
         st.session_state.forecast_df,
         column_config=col_cfg,
         num_rows="fixed",
-        use_container_width=True,
+        width='stretch',
         key="forecast_editor",
         hide_index=True,
     )
@@ -323,11 +329,11 @@ with tabs[3]:
             display[c] = display[c].map(lambda v: fmt_money(v, currency))
         for c in ["EBITDA Margin", "Net Margin"]:
             display[c] = display[c].map(fmt_pct)
-        st.dataframe(display, use_container_width=True, hide_index=True)
+        st.dataframe(display, width='stretch', hide_index=True)
         c1, c2 = st.columns(2)
-        with c1: st.plotly_chart(line_trend(pnl, "EBITDA", "EBITDA Trend"), use_container_width=True, key="pnl_ebitda_trend")
+        with c1: st.plotly_chart(line_trend(pnl, "EBITDA", "EBITDA Trend"), width='stretch', key="pnl_ebitda_trend")
         with c2: st.plotly_chart(line_trend(pnl, "Net Income", "Net Income Trend",
-                                            color=PALETTE["red"]), use_container_width=True, key="pnl_net_income_trend")
+                                            color=PALETTE["red"]), width='stretch', key="pnl_net_income_trend")
 
 # ── Balance Sheet ──
 with tabs[4]:
@@ -340,8 +346,8 @@ with tabs[4]:
         for c in display.columns:
             if c == "Year": continue
             display[c] = display[c].map(lambda v: fmt_money(v, currency))
-        st.dataframe(display, use_container_width=True, hide_index=True)
-        st.plotly_chart(working_capital_components(bs), use_container_width=True, key="bs_working_capital_components")
+        st.dataframe(display, width='stretch', hide_index=True)
+        st.plotly_chart(working_capital_components(bs), width='stretch', key="bs_working_capital_components")
 
 # ── Cash Flow ──
 with tabs[5]:
@@ -354,10 +360,10 @@ with tabs[5]:
         for c in display.columns:
             if c == "Year": continue
             display[c] = display[c].map(lambda v: fmt_money(v, currency))
-        st.dataframe(display, use_container_width=True, hide_index=True)
+        st.dataframe(display, width='stretch', hide_index=True)
         c1, c2 = st.columns(2)
-        with c1: st.plotly_chart(cashflow_waterfall(cf), use_container_width=True, key="cf_waterfall")
-        with c2: st.plotly_chart(cumulative_cashflow(cf), use_container_width=True, key="cf_cumulative")
+        with c1: st.plotly_chart(cashflow_waterfall(cf), width='stretch', key="cf_waterfall")
+        with c2: st.plotly_chart(cumulative_cashflow(cf), width='stretch', key="cf_cumulative")
 
 # ── IRR / NPV / Payback ──
 with tabs[6]:
@@ -373,8 +379,8 @@ with tabs[6]:
         c[3].markdown(f"**Discounted Payback**<br><span style='color:{PALETTE['blue']}; font-size:28px;'>{fmt_years(summary['discounted_payback'])}</span>", unsafe_allow_html=True)
         st.write("")
         c1, c2 = st.columns([1, 2])
-        with c1: st.plotly_chart(irr_gauge(summary["irr"], summary["hurdle"]), use_container_width=True, key="metrics_irr_gauge")
-        with c2: st.plotly_chart(cumulative_cashflow(cf), use_container_width=True, key="metrics_cumulative_cf")
+        with c1: plotly(irr_gauge(summary["irr"], summary["hurdle"]), key="metrics_irr_gauge")
+        with c2: plotly(cumulative_cashflow(cf), key="metrics_cumulative_cf")
 
         st.markdown("#### ROI")
         if not roi_df.empty:
@@ -382,12 +388,12 @@ with tabs[6]:
             disp["EBIT"] = disp["EBIT"].map(lambda v: fmt_money(v, currency))
             disp["Average Investment"] = disp["Average Investment"].map(lambda v: fmt_money(v, currency))
             disp["ROI"] = disp["ROI"].map(fmt_pct)
-            st.dataframe(disp, use_container_width=True, hide_index=True)
+            st.dataframe(disp, width='stretch', hide_index=True)
             c = st.columns(3)
             c[0].metric("Average ROI", fmt_pct(summary["roi_avg"]))
             c[1].metric("3-Year ROI", fmt_pct(summary["roi_3y"]))
             c[2].metric("5-Year ROI", fmt_pct(summary["roi_5y"]))
-            st.plotly_chart(roi_trend(roi_df), use_container_width=True, key="metrics_roi_trend")
+            st.plotly_chart(roi_trend(roi_df), width='stretch', key="metrics_roi_trend")
 
 # ── Charts & Dashboard ──
 with tabs[7]:
@@ -397,18 +403,18 @@ with tabs[7]:
         st.info("Charts appear once data is entered.")
     else:
         c1, c2 = st.columns(2)
-        with c1: st.plotly_chart(line_trend(pnl, "Sales", "Sales Trend"), use_container_width=True, key="charts_sales_trend")
+        with c1: st.plotly_chart(line_trend(pnl, "Sales", "Sales Trend"), width='stretch', key="charts_sales_trend")
         with c2: st.plotly_chart(line_trend(pnl, "EBITDA", "EBITDA Trend",
-                                            color=PALETTE["red"]), use_container_width=True, key="charts_ebitda_trend")
+                                            color=PALETTE["red"]), width='stretch', key="charts_ebitda_trend")
         c1, c2 = st.columns(2)
-        with c1: st.plotly_chart(cashflow_waterfall(cf), use_container_width=True, key="charts_cf_waterfall")
-        with c2: st.plotly_chart(cumulative_cashflow(cf), use_container_width=True, key="charts_cumulative_cf")
+        with c1: st.plotly_chart(cashflow_waterfall(cf), width='stretch', key="charts_cf_waterfall")
+        with c2: st.plotly_chart(cumulative_cashflow(cf), width='stretch', key="charts_cumulative_cf")
         c1, c2 = st.columns(2)
-        with c1: st.plotly_chart(working_capital_components(bs), use_container_width=True, key="charts_working_capital")
-        with c2: st.plotly_chart(capex_vs_depreciation(pnl, setup), use_container_width=True, key="charts_capex_depreciation")
+        with c1: st.plotly_chart(working_capital_components(bs), width='stretch', key="charts_working_capital")
+        with c2: st.plotly_chart(capex_vs_depreciation(pnl, setup), width='stretch', key="charts_capex_depreciation")
         c1, c2 = st.columns(2)
-        with c1: st.plotly_chart(roi_trend(roi_df), use_container_width=True, key="charts_roi_trend")
-        with c2: st.plotly_chart(dashboard_overview(pnl), use_container_width=True, key="charts_dashboard_overview")
+        with c1: st.plotly_chart(roi_trend(roi_df), width='stretch', key="charts_roi_trend")
+        with c2: st.plotly_chart(dashboard_overview(pnl), width='stretch', key="charts_dashboard_overview")
 
         with st.expander("🔬 Sensitivity Analysis (NPV tornado, ±10%)"):
             base_cf = cf["Cash Flow"].tolist()
@@ -444,7 +450,7 @@ with tabs[7]:
                     hi_cf = build_cashflow(hi_pnl, hi_bs, s_hi)["Cash Flow"].tolist()
                 scenarios[label] = (calc_npv(setup["discount_rate"], lo_cf),
                                     calc_npv(setup["discount_rate"], hi_cf))
-            st.plotly_chart(tornado_sensitivity(base_npv, scenarios), use_container_width=True, key="charts_tornado_sensitivity")
+            st.plotly_chart(tornado_sensitivity(base_npv, scenarios), width='stretch', key="charts_tornado_sensitivity")
 
 # ── Excel Export ──
 with tabs[8]:
@@ -460,7 +466,7 @@ with tabs[8]:
                 data=data,
                 file_name=f"FIN_APPS_{(st.session_state.project_name or 'project').replace(' ','_')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True,
+                width='stretch',
             )
             st.success("Workbook ready.")
         except Exception as e:
